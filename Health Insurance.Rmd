@@ -1,5 +1,5 @@
 ---
-title: "Acumen"
+title: "Health Insurance"
 author: "Tiange Yu"
 date: "May 31, 2019"
 output: html_document
@@ -17,7 +17,7 @@ library(Epi)
 ```{r}
 #setwd("C:/Users/tiang/Desktop")
 #Data Importation
-data <- read_excel("Acumen Data Analysis Exercise Yu Tiange.xlsx", sheet=2)
+data <- read_excel("health insurance.xlsx", sheet=2)
 ```
 
 ###Question 1a

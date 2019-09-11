@@ -1,0 +1,196 @@
+---
+title: "Acumen"
+author: "Tiange Yu"
+date: "May 31, 2019"
+output: html_document
+---
+###Library loading
+```{r}
+library(readxl) # for reading in excel file
+library(tableone)
+library(dplyr)
+library(ggplot2)
+library(Epi)
+```
+
+###Data Importation
+```{r}
+#setwd("C:/Users/tiang/Desktop")
+#Data Importation
+data <- read_excel("Acumen Data Analysis Exercise Yu Tiange.xlsx", sheet=2)
+```
+
+###Question 1a
+```{r}
+#Rename the variables into shorter form
+names(data) <- c("obs", "quar", "id", "sex", "race", "age", "visit", "salary",
+                 "score")
+varlist <- colnames(data)
+varlist
+#get the descriptive statistics
+summary(data)
+#show age larger than 100
+age100 <- data[with(data, age>100), ] #create dataset with only unreasonable obs
+dim(age100) #get the obs no. and var no.
+summary(age100$age)
+#show health score larger than 6
+score6 <- data[with(data, score>6), ]
+dim(score6)
+summary(score6$score)
+```
+
+###Question 1b
+```{r}
+#recode Age>100 and HealthScore>6 into missing
+data$age[data$age>100]<-NA
+data$score[data$score>6]<-NA
+nomiss <-na.omit(data)
+attach(nomiss)
+
+#table 1
+contvar <- c("sex", "race", "age", "visit", "salary", "score")
+catvar <- c("sex", "race", "visit")
+CreateTableOne(vars = contvar, strata="quar", nomiss, catvar, includeNA = FALSE)
+
+#line chart for cont vars
+#age
+age<-data.frame(nomiss) %>% #save mean by quarter as new data
+  group_by(quar) %>%
+  summarise(mean=mean(age), sd=sd(age))
+
+ggplot(data = age, aes(x = age$quar, y=age$mean)) +
+  geom_line(aes()) + 
+  labs(x = "Quarter", y = "Mean Age (yr)", title = "The Mean Age Change by Quarter") + 
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  theme_classic()
+
+#salary
+salary<-data.frame(nomiss) %>% #save mean by quarter as new data
+  group_by(quar) %>%
+  summarise(mean=mean(salary), sd=sd(salary))
+
+ggplot(data = salary, aes(x = salary$quar, y=salary$mean)) +
+  geom_line(aes()) + 
+  labs(x = "Quarter", y = "Mean Salary ($/yr)", title = "The Mean Salary Change by Quarter") + 
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  theme_classic()
+
+#score
+score<-data.frame(nomiss) %>% #save mean by quarter as new data
+  group_by(quar) %>%
+  summarise(mean=mean(score), sd=sd(score))
+
+ggplot(data = score, aes(x = score$quar, y=score$mean)) +
+  geom_line(aes()) + 
+  labs(x = "Quarter", y = "Mean Health Score", title = "The Mean Health Score Change by Quarter") + 
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  theme_classic()
+
+#line chart for cat var
+#sex-female
+sex <- table(quar, sex)
+prop.table(sex, 1) # row percentages 
+sexfreq <- data.frame(prop.table(sex, 1))
+female <- sexfreq[with(sexfreq, sex==0), ]
+female$pct <- female$Freq*100
+female$quar <- as.numeric(as.character(female$quar))
+
+ggplot(data = female, aes(x = female$quar, y=female$pct)) +
+  geom_line(aes()) + 
+  labs(x = "Quarter", y = "Percentage of Female (%)", title = "The Percent of Female Change by Quarter") + 
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  theme_classic()
+
+#race
+race <- table(nomiss$quar, nomiss$race)
+prop.table(race, 1) # row percentages 
+racefreq <- data.frame(prop.table(race, 1))
+racefreq$pct=racefreq$Freq*100
+racefreq$Var1 <- as.numeric(as.character(racefreq$Var1))
+race2 <- sexfreq[with(sexfreq, race==2), ]
+race3 <- sexfreq[with(sexfreq, race==3), ]
+
+ggplot(data = racefreq, aes(x = racefreq$Var1, y=racefreq$pct, group=Var2, colour=Var2)) +
+  geom_line(aes()) + 
+  labs(x = "Quarter", y = "Percentage of Race (%)", 
+       title = "The Percent of Races Change by Quarter") + 
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  scale_colour_hue(name="Race") +
+  theme_classic()
+
+#visit-yes
+visit <- table(nomiss$quar, nomiss$visit)
+prop.table(visit, 1) # row percentages 
+visitfreq <- data.frame(prop.table(visit, 1))
+visit1 <- visitfreq[with(visitfreq, Var2==1), ]
+visit1$pct <- visit1$Freq*100
+visit1$Var1 <- as.numeric(as.character(visit1$Var1))
+
+ggplot(data = visit1, aes(x = visit1$Var1, y=visit1$pct)) +
+  geom_line(aes()) + 
+  labs(x = "Quarter", y = "Percentage of People Visited Hospital (%)", 
+       title = "The Percent of People Visited Hospital Change by Quarter") + 
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  theme_classic()
+```
+
+###Question2
+```{r}
+#univariate linear regression
+#age
+agelm <- lm(score ~ age, data = nomiss)
+summary(agelm)
+exp(cbind("Coefficient" = coef(agelm), confint.default(agelm, level = 0.95)))
+
+#scatter plot for age
+ggplot(data = nomiss, aes(x = age, y = score)) +
+  geom_point(aes(), position = position_jitter(width = .5), size=1) + 
+  geom_smooth(method = "lm") +
+  labs(x = "Age(yr)", y = "Health Score", title = "Scatter Plot of Age and Health Score",
+       subtitle= "Adjusted R-squared=0.0618, p<0.001") +
+  theme_classic()
+
+#salary
+salarylm <- lm(score ~ salary, data = nomiss)
+summary(salarylm)
+exp(cbind("Coefficient" = coef(salarylm), confint.default(salarylm, level = 0.95)))
+#scatter plot for salary
+ggplot(data = nomiss, aes(x = salary, y = score)) +
+  geom_point(aes(), position = position_jitter(width = .5), size=1) + 
+  geom_smooth(method = "lm") +
+  labs(x = "Salary($/yr)", y = "Health Score", title = "Scatter Plot of Salary and Health Score",
+       subtitle= "Adjusted R-squared=0.0060, p<0.001") +
+  theme_classic()
+
+#quarter
+quarlm <- lm(score ~ quar, data = nomiss)
+summary(quarlm)
+exp(cbind("Coefficient" = coef(quarlm), confint.default(quarlm, level = 0.95)))
+#scatter plot for salary
+ggplot(data = nomiss, aes(x = quar, y = score)) +
+  geom_point(aes(), position = position_jitter(width = .5), size=1) + 
+  geom_smooth(method = "lm") +
+  labs(x = "Quarter", y = "Health Score", title = "Scatter Plot of Quarter and Health Score",
+       subtitle= "Adjusted R-squared=0.0045, p<0.001") +
+  theme_classic()
+
+#sex
+sexlm <- lm(score ~ sex, data = nomiss)
+summary(sexlm)
+exp(cbind("Coefficient" = coef(sexlm), confint.default(sexlm, level = 0.95)))
+
+#race
+racelm <- lm(score ~ as.character(race), data = nomiss)
+summary(racelm)
+exp(cbind("Coefficient" = coef(racelm), confint.default(racelm, level = 0.95)))
+
+#visit
+visitlm <- lm(score ~ visit, data=nomiss)
+summary(visitlm)
+exp(cbind("Coefficient" = coef(visitlm), confint.default(visitlm, level = 0.95)))
+
+#multivariate linear regression
+multi <- lm(score ~ sex + as.character(race) + quar +age +visit+salary, data = nomiss)
+summary(multi)
+exp(cbind("Coefficient" = coef(multi), confint.default(multi, level = 0.95)))
+```

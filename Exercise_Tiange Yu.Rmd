@@ -1,0 +1,59 @@
+---
+title: "CDPH Exercise"
+author: "Tiange Yu"
+date: "August 19, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##load libraries
+```{r}
+library(readr)
+library(knitr)
+library(dplyr)
+```
+
+##Read csv files 
+```{r}
+diagnostic<-read.csv(file='C:/Users/tiang/Desktop/Appl/CDPH/diagnostic.csv', header = TRUE, sep=",")
+prognostic<-read.csv(file='C:/Users/tiang/Desktop/Appl/CDPH/prognostic.csv', header = TRUE, sep=",")
+
+#summurize the datasets
+kable(summary(diagnostic))
+kable(summary(prognostic))
+```
+
+##positive diagnostic number calculation
+```{r}
+#create new dataset only with positive result patients
+posidiag <- subset(diagnostic, result=="Positive")
+
+#keep one row for one patient
+pid <- distinct(posidiag, patient_id)
+
+#check the number of rows
+dim(pid)
+```
+
+###There are 1746 patiens with positive diagnostic result.
+
+
+##merge two datasets and check
+```{r}
+#create a new variable as the marker of prognostic
+prognostic$prog <- 1
+
+#merge two datasets
+combined <- merge(pid, prognostic, by="patient_id")
+
+#keeo only one row for one patient
+prog_pid <- distinct(combined, patient_id)
+
+#check the number of rows
+dim(prog_pid)
+```
+
+###There are 1225 patients had positive diagnostic result and had prognostic test.
